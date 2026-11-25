@@ -1,0 +1,17 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Localhost :5173",
+      "request": "launch",
+      "type": "dart",
+      "deviceId": "web-server",
+      "args": ["--web-hostname", "127.0.0.1", "--web-port", "5173"]
+    },
+    {
+      "name": "Telefon / emulator Android",
+      "request": "launch",
+      "type": "dart"
+    }
+  ]
+}
