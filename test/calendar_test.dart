@@ -91,14 +91,32 @@ void main() {
         calendarId: 'calendar',
       );
       expect(result.created, 1);
-      final eventStart = events.single['eventStartDate'] as int;
-      expect(events.single['eventURL'], 'https://example.com/articol');
+      final event = events.single;
+      final eventStart = event['eventStartDate'] as int;
+      final eventEnd = event['eventEndDate'] as int;
+      expect(event['eventURL'], 'https://example.com/articol');
+      expect(event['eventTitle'], 'O știre de test');
+      expect(
+        event['eventDescription'],
+        allOf(
+          contains('Autor: ana'),
+          contains('Link: https://example.com/articol'),
+          contains('Data publicării:'),
+        ),
+      );
       expect(
         tz.TZDateTime.fromMillisecondsSinceEpoch(
           tz.getLocation('Europe/Bucharest'),
           eventStart,
         ).hour,
         12,
+      );
+      expect(
+        tz.TZDateTime.fromMillisecondsSinceEpoch(
+          tz.getLocation('Europe/Bucharest'),
+          eventEnd,
+        ).hour,
+        18,
       );
       final repeated = await service.export(
         [sampleArticle()],
@@ -110,9 +128,14 @@ void main() {
     },
   );
   test('Denied calendar permission results in a useful error', () async {
-    messenger.setMockMethodCallHandler(calendarChannel, (_) async => false);
+    final requests = <String>[];
+    messenger.setMockMethodCallHandler(calendarChannel, (call) async {
+      requests.add(call.method);
+      return false;
+    });
     final service = DeviceCalendarService(platformSupported: true);
     await expectLater(service.calendars(), throwsA(isA<AppException>()));
+    expect(requests, ['hasPermissions', 'requestPermissions']);
   });
   test('Read-only calendars are excluded', () async {
     messenger.setMockMethodCallHandler(

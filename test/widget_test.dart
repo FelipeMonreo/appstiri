@@ -5,6 +5,7 @@ import 'package:appstiri/services/article_summary_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
@@ -16,6 +17,89 @@ void main() {
     () => SharedPreferencesAsyncPlatform.instance =
         InMemorySharedPreferencesAsync.empty(),
   );
+
+  testWidgets(
+    'Language button translates the interface around article content',
+    (tester) async {
+      final controller = createController();
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(NewsApp(controller: controller));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Știri UNITBV'), findsOneWidget);
+      await tester.tap(find.text('RO'));
+      await tester.pumpAndSettle();
+      expect(find.text('UNITBV News'), findsOneWidget);
+      expect(find.text('EN'), findsOneWidget);
+      expect(find.text('Favorites (0)'), findsOneWidget);
+      expect(find.text('O știre de test'), findsOneWidget);
+      expect(find.byTooltip('Add to favorites'), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('details-42')));
+      await tester.pumpAndSettle();
+      expect(find.text('Article details'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('Article summary'),
+        120,
+        scrollable: find
+            .descendant(
+              of: find.byKey(const PageStorageKey('article-reader')),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+      expect(find.text('Article summary'), findsOneWidget);
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('EN'));
+      await tester.pumpAndSettle();
+      expect(find.text('Știri UNITBV'), findsOneWidget);
+      expect(find.text('RO'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('Desktop navigation keeps the selected page after resize', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1200, 800);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final controller = createController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(NewsApp(controller: controller));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SegmentedButton<int>), findsOneWidget);
+    await tester.tap(find.text('Favorite (0)'));
+    await tester.pumpAndSettle();
+    expect(find.text('Nu ai încă știri favorite.'), findsOneWidget);
+
+    tester.view.physicalSize = const Size(390, 800);
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
+      1,
+    );
+    expect(find.text('Nu ai încă știri favorite.'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    final indicator = find.byKey(
+      const ValueKey('navigation-selection-indicator'),
+    );
+    final favoritesX = tester.getCenter(indicator).dx;
+    await tester.tap(find.text('Toate știrile'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 140));
+    final transitionX = tester.getCenter(indicator).dx;
+    await tester.pumpAndSettle();
+    final newsX = tester.getCenter(indicator).dx;
+    expect(transitionX, lessThan(favoritesX));
+    expect(transitionX, greaterThan(newsX));
+  });
+
   testWidgets('User can favorite, export, remove and return to news', (
     tester,
   ) async {
@@ -27,13 +111,23 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('O știre de test'), findsOneWidget);
-    await tester.ensureVisible(find.text('Adaugă la favorite'));
+    final published = DateFormat('dd.MM.yyyy · HH:mm')
+        .format(sampleArticle().publishedAt!);
+    expect(find.text('Autor: ana'), findsOneWidget);
+    expect(find.text(published), findsOneWidget);
+    expect(find.text('120 puncte'), findsOneWidget);
+    expect(find.text('15 comentarii'), findsOneWidget);
+    expect(find.byTooltip('Articolul original'), findsOneWidget);
+    await tester.ensureVisible(find.byTooltip('Adaugă la favorite'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Adaugă la favorite'));
+    await tester.tap(find.byTooltip('Adaugă la favorite'));
     await tester.pumpAndSettle();
     expect(controller.favorites.length, 1);
     await tester.tap(find.text('Favorite (1)'));
     await tester.pumpAndSettle();
+    expect(find.text('Autor: ana'), findsOneWidget);
+    expect(find.text(published), findsOneWidget);
+    expect(find.byTooltip('Articolul original'), findsOneWidget);
     await tester.ensureVisible(find.text('Exportă favoritele în calendar'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Exportă favoritele în calendar'));
@@ -43,9 +137,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(calendar.exported!.single.id, '42');
     expect(calendar.day, isNotNull);
-    await tester.ensureVisible(find.text('Șterge din favorite'));
+    await tester.ensureVisible(find.byTooltip('Șterge din favorite'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Șterge din favorite'));
+    await tester.tap(find.byTooltip('Șterge din favorite'));
     await tester.pumpAndSettle();
     expect(find.text('Nu ai încă știri favorite.'), findsOneWidget);
     expect(controller.favorites, isEmpty);
@@ -81,9 +175,9 @@ void main() {
       NewsApp(controller: controller, calendar: FakeCalendar()),
     );
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Detalii'));
+    await tester.ensureVisible(find.byKey(const ValueKey('details-42')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Detalii'));
+    await tester.tap(find.byKey(const ValueKey('details-42')));
     await tester.pumpAndSettle();
     expect(detailsCalls, 1);
     expect(find.text('Detalii actualizate'), findsOneWidget);
@@ -92,12 +186,22 @@ void main() {
     await tester.scrollUntilVisible(
       find.text('Citește articolul complet'),
       250,
-      scrollable: find.byType(Scrollable).first,
+      scrollable: find
+          .descendant(
+            of: find.byKey(const PageStorageKey('article-reader')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
     );
     await tester.scrollUntilVisible(
       find.textContaining('Pentru mai multe informații'),
       180,
-      scrollable: find.byType(Scrollable).first,
+      scrollable: find
+          .descendant(
+            of: find.byKey(const PageStorageKey('article-reader')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
     );
     expect(
       find.text(
@@ -133,20 +237,30 @@ void main() {
         NewsApp(controller: controller, calendar: FakeCalendar()),
       );
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.text('Detalii'));
+      await tester.ensureVisible(find.byKey(const ValueKey('details-42')));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Detalii'));
+      await tester.tap(find.byKey(const ValueKey('details-42')));
       await tester.pumpAndSettle();
       await tester.scrollUntilVisible(
         find.text('Reîncearcă rezumatul'),
         180,
-        scrollable: find.byType(Scrollable).first,
+        scrollable: find
+            .descendant(
+              of: find.byKey(const PageStorageKey('article-reader')),
+              matching: find.byType(Scrollable),
+            )
+            .first,
       );
       expect(find.text('Reîncearcă rezumatul'), findsOneWidget);
       await tester.scrollUntilVisible(
         find.text('Citește articolul complet'),
         250,
-        scrollable: find.byType(Scrollable).first,
+        scrollable: find
+            .descendant(
+              of: find.byKey(const PageStorageKey('article-reader')),
+              matching: find.byType(Scrollable),
+            )
+            .first,
       );
       expect(
         tester
@@ -166,7 +280,7 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
-  testWidgets('Phone layout uses full-width buttons without overflow', (
+  testWidgets('Phone layout keeps large favorite targets without overflow', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(320, 740);
@@ -184,9 +298,9 @@ void main() {
       greaterThanOrEqualTo(56),
     );
     expect(tester.takeException(), isNull);
-    await tester.ensureVisible(find.text('Adaugă la favorite'));
+    await tester.ensureVisible(find.byTooltip('Adaugă la favorite'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Adaugă la favorite'));
+    await tester.tap(find.byTooltip('Adaugă la favorite'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Favorite (1)'));
     await tester.pumpAndSettle();

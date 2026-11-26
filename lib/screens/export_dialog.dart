@@ -1,4 +1,8 @@
 import 'package:material_ui/material_ui.dart';
+
+import '../widgets/reader_components.dart';
+import '../widgets/reader_language.dart';
+
 import 'package:intl/intl.dart';
 
 import '../models/article.dart';
@@ -85,7 +89,8 @@ class _ExportDialogState extends State<ExportDialog> {
       initialDate: _day,
       firstDate: DateTime(2000),
       lastDate: DateTime(2100, 12, 31),
-      helpText: 'Data evenimentelor',
+      helpText: context.tr('Data evenimentelor', 'Event date'),
+      builder: (context, child) => ReaderPanelBackdrop(child: child!),
     );
     if (date != null && mounted) setState(() => _day = date);
   }
@@ -105,7 +110,7 @@ class _ExportDialogState extends State<ExportDialog> {
       if (result.failed > 0) {
         setState(
           () => _error =
-              '${result.message} Reîncearcă pentru cele nereușite; cele salvate nu se dublează.',
+              '${context.calendarResult(result)} ${context.tr('Reîncearcă pentru cele nereușite; cele salvate nu se dublează.', 'Retry the failed events. Previously saved events will not be duplicated.')}',
         );
       } else {
         Navigator.pop(context, result);
@@ -121,15 +126,27 @@ class _ExportDialogState extends State<ExportDialog> {
   Widget build(BuildContext context) {
     final native = widget.calendar.isNative;
     final ready = !_busy && !_loading && (!native || _selected != null);
+    final screen = MediaQuery.sizeOf(context);
     return PopScope(
       canPop: !_busy,
       child: AlertDialog(
         scrollable: true,
+        constraints: BoxConstraints(
+          maxWidth: screen.width >= 720
+              ? screen.width * .70
+              : screen.width - 32,
+          maxHeight: screen.height * .70,
+        ),
         insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
         titlePadding: const EdgeInsets.fromLTRB(24, 28, 24, 12),
         contentPadding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
         actionsPadding: const EdgeInsets.fromLTRB(24, 12, 24, 20),
-        title: const Text('Exportă favoritele în calendar'),
+        title: Text(
+          context.tr(
+            'Exportă favoritele în calendar',
+            'Export favorites to calendar',
+          ),
+        ),
         content: SizedBox(
           width: 500,
           child: SingleChildScrollView(
@@ -138,20 +155,26 @@ class _ExportDialogState extends State<ExportDialog> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  '${widget.articles.length} ${widget.articles.length == 1 ? 'știre favorită' : 'știri favorite'} · un eveniment pentru fiecare știre.',
+                  '${widget.articles.length} ${widget.articles.length == 1 ? context.tr('știre favorită', 'favorite article') : context.tr('știri favorite', 'favorite articles')} · ${context.tr('un eveniment pentru fiecare știre.', 'one event per article.')}',
                 ),
                 const SizedBox(height: 16),
                 Text(
                   native
-                      ? 'Alege data și calendarul în care salvezi evenimentele.'
-                      : 'În browser se descarcă un fișier .ics. Îl poți importa în Google Calendar, Outlook sau alt calendar. Salvarea directă este disponibilă în aplicația Android/iOS.',
+                      ? context.tr(
+                          'Alege data și calendarul în care salvezi evenimentele.',
+                          'Choose the date and calendar for the events.',
+                        )
+                      : context.tr(
+                          'În browser se descarcă un fișier .ics. Îl poți importa în Google Calendar, Outlook sau alt calendar. Salvarea directă este disponibilă în aplicația Android/iOS.',
+                          'Your browser downloads an .ics file. Import it into Google Calendar, Outlook, or another calendar. The Android/iOS app can save events directly.',
+                        ),
                 ),
                 const SizedBox(height: 20),
                 OutlinedButton.icon(
                   onPressed: _busy ? null : _chooseDate,
                   icon: const Icon(Icons.date_range),
                   label: Text(
-                    'Data: ${DateFormat('EEEE, dd.MM.yyyy', 'ro').format(_day)}',
+                    '${context.tr('Data', 'Date')}: ${DateFormat('EEEE, dd.MM.yyyy', Localizations.localeOf(context).languageCode).format(_day)}',
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -162,60 +185,83 @@ class _ExportDialogState extends State<ExportDialog> {
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Text(
-                    'Interval automat: ${CalendarSlot.forDay(_day).label}',
+                    '${context.tr('Interval automat', 'Automatic time slot')}: ${CalendarSlot.forDay(_day).label}',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       color: Theme.of(context).colorScheme.onPrimaryContainer,
                     ),
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'Luni, miercuri, vineri: 14:00–20:00\nMarți, joi: 12:00–18:00\nWeekend: 08:00–12:00',
+                Text(
+                  context.tr(
+                    'Luni, miercuri, vineri: 14:00–20:00\nMarți, joi: 12:00–18:00\nWeekend: 08:00–12:00',
+                    'Monday, Wednesday, Friday: 14:00–20:00\nTuesday, Thursday: 12:00–18:00\nWeekend: 08:00–12:00',
+                  ),
                 ),
                 const SizedBox(height: 12),
-                const Text(
-                  'Data publicării, autorul și linkul știrii vor fi incluse în descrierea evenimentului.',
+                Text(
+                  context.tr(
+                    'Data publicării, autorul și linkul știrii vor fi incluse în descrierea evenimentului.',
+                    'The event description includes the publication date, author, and article link.',
+                  ),
                 ),
                 if (native) ...[
                   const SizedBox(height: 20),
                   if (_loading) const LinearProgressIndicator(),
                   if (_targets.isNotEmpty)
-                    DropdownButtonFormField<String>(
-                      key: ValueKey(_selected),
-                      initialValue: _selected,
-                      isExpanded: true,
-                      decoration: const InputDecoration(labelText: 'Calendar'),
-                      items: _targets
-                          .map(
-                            (target) => DropdownMenuItem(
-                              value: target.id,
-                              child: Text(
-                                target.name,
-                                overflow: TextOverflow.ellipsis,
+                    Theme(
+                      // The iOS dropdown scrollbar bypasses ScrollbarTheme.
+                      data: Theme.of(context).platform == TargetPlatform.iOS
+                          ? Theme.of(context)
+                                .copyWith(platform: TargetPlatform.android)
+                          : Theme.of(context),
+                      child: DropdownButtonFormField<String>(
+                        key: ValueKey(_selected),
+                        initialValue: _selected,
+                        isExpanded: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Calendar',
+                        ),
+                        items: _targets
+                            .map(
+                              (target) => DropdownMenuItem(
+                                value: target.id,
+                                child: Text(
+                                  target.name,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: _busy || _loading
-                          ? null
-                          : (value) => setState(() => _selected = value),
+                            )
+                            .toList(),
+                        onChanged: _busy || _loading
+                            ? null
+                            : (value) => setState(() => _selected = value),
+                      ),
                     ),
                   if (_targets.isEmpty && !_loading && _error == null) ...[
-                    const Text(
-                      'Nu există calendare în care poți scrie. Adaugă un cont Google în dispozitiv sau creează un calendar local.',
+                    Text(
+                      context.tr(
+                        'Nu există calendare în care poți scrie. Adaugă un cont Google în dispozitiv sau creează un calendar local.',
+                        'No writable calendars are available. Add a Google account to your device or create a local calendar.',
+                      ),
                     ),
                     const SizedBox(height: 12),
                     OutlinedButton.icon(
                       onPressed: _createCalendar,
                       icon: const Icon(Icons.add),
-                      label: const Text('Creează calendar local'),
+                      label: Text(
+                        context.tr(
+                          'Creează calendar local',
+                          'Create local calendar',
+                        ),
+                      ),
                     ),
                   ],
                 ],
                 if (_error != null) ...[
                   const SizedBox(height: 16),
                   Text(
-                    _error!,
+                    context.localizedMessage(_error!),
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.error,
                     ),
@@ -223,13 +269,20 @@ class _ExportDialogState extends State<ExportDialog> {
                   if (native && _selected == null)
                     TextButton(
                       onPressed: _loading ? null : _load,
-                      child: const Text('Reîncearcă accesul la calendar'),
+                      child: Text(
+                        context.tr(
+                          'Reîncearcă accesul la calendar',
+                          'Retry calendar access',
+                        ),
+                      ),
                     ),
                 ],
                 if (_busy) ...[
                   const SizedBox(height: 16),
                   const LinearProgressIndicator(),
-                  const Text('Se salvează evenimentele…'),
+                  Text(
+                    context.tr('Se salvează evenimentele…', 'Saving events…'),
+                  ),
                 ],
               ],
             ),
@@ -246,13 +299,18 @@ class _ExportDialogState extends State<ExportDialog> {
                   onPressed: ready ? _export : null,
                   icon: Icon(native ? Icons.event_available : Icons.download),
                   label: Text(
-                    native ? 'Salvează în calendar' : 'Descarcă fișierul .ics',
+                    native
+                        ? context.tr('Salvează în calendar', 'Save to calendar')
+                        : context.tr(
+                            'Descarcă fișierul .ics',
+                            'Download .ics file',
+                          ),
                   ),
                 ),
                 const SizedBox(height: 8),
                 TextButton(
                   onPressed: _busy ? null : () => Navigator.pop(context),
-                  child: const Text('Anulează'),
+                  child: Text(context.tr('Anulează', 'Cancel')),
                 ),
               ],
             ),

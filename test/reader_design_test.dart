@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 
@@ -5,7 +6,9 @@ import 'package:appstiri/app.dart';
 import 'package:appstiri/screens/details_screen.dart';
 import 'package:appstiri/screens/news_screen.dart';
 import 'package:appstiri/theme/app_theme.dart';
+import 'package:appstiri/widgets/reader_components.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
@@ -17,6 +20,107 @@ void main() {
   setUp(() {
     SharedPreferencesAsyncPlatform.instance =
         InMemorySharedPreferencesAsync.empty();
+  });
+
+  testWidgets('The refresh icon rotates only while the request is pending', (
+    tester,
+  ) async {
+    final feed = utf8Response(
+      jsonEncode({
+        'hits': [articleJson()],
+      }),
+      200,
+    );
+    final pending = Completer<http.Response>();
+    var calls = 0;
+    final controller = createController(
+      client: MockClient((_) async => ++calls == 1 ? feed : pending.future),
+    );
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(NewsApp(controller: controller));
+    await tester.pumpAndSettle();
+    final rotation = find.descendant(
+      of: find.byType(ReaderRefreshIcon),
+      matching: find.byType(RotationTransition),
+    );
+    expect(tester.widget<RotationTransition>(rotation).turns.value, 0);
+    await tester.tap(find.byTooltip('Actualizează știrile'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(
+      tester.widget<RotationTransition>(rotation).turns.value,
+      greaterThan(0),
+    );
+
+    pending.complete(feed);
+    await tester.pumpAndSettle();
+    expect(tester.widget<RotationTransition>(rotation).turns.value, 0);
+  });
+
+  testWidgets('The intro waits for the platform to show its first frame', (
+    tester,
+  ) async {
+    final platformReady = Completer<void>();
+    final controller = createController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      NewsApp(controller: controller, introReady: platformReady.future),
+    );
+    final title = find.byKey(const ValueKey('reader-app-title'));
+    await tester.pump(const Duration(seconds: 6));
+    final hidden = tester.widget<Text>(title).textSpan! as TextSpan;
+    expect(hidden.children!.first.toPlainText(), isEmpty);
+
+    platformReady.complete();
+    await tester.pumpAndSettle();
+    expect(tester.widget<Text>(title).data, 'Știri UNITBV');
+  });
+
+  testWidgets('The intro mark shrinks into the header position', (
+    tester,
+  ) async {
+    final controller = createController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(NewsApp(controller: controller));
+
+    final header = find.byWidgetPredicate(
+      (widget) =>
+          widget is Image &&
+          widget.semanticLabel == 'Universitatea Transilvania din Brașov',
+    );
+    final intro = find.byWidgetPredicate(
+      (widget) =>
+          widget is Image &&
+          widget.semanticLabel == null &&
+          widget.image is AssetImage &&
+          (widget.image as AssetImage).assetName ==
+              'assets/branding/unitbv.png',
+    );
+
+    await tester.pump(const Duration(milliseconds: 3650));
+    final initialWidth = tester.getSize(intro).width;
+    await tester.pump(const Duration(milliseconds: 380));
+    expect(tester.getSize(intro).width, lessThan(initialWidth));
+    expect(
+      tester.getSize(intro).width,
+      greaterThan(tester.getSize(header).width),
+    );
+
+    await tester.pump(const Duration(milliseconds: 380));
+    expect(tester.getRect(intro), tester.getRect(header));
+    await tester.pump(const Duration(milliseconds: 260));
+    final title = find.byKey(const ValueKey('reader-app-title'));
+    final writing = tester.widget<Text>(title).textSpan! as TextSpan;
+    final visible = writing.children!.first.toPlainText();
+    expect(visible, isNotEmpty);
+    expect(visible.length, lessThan('Știri UNITBV'.length));
+    expect(intro, findsOneWidget);
+    final card = find.byKey(const ValueKey('details-42'));
+    final slidingX = tester.getTopLeft(card).dx;
+    await tester.pumpAndSettle();
+    expect(intro, findsNothing);
+    expect(tester.widget<Text>(title).data, 'Știri UNITBV');
+    expect(tester.getTopLeft(card).dx, greaterThan(slidingX));
   });
 
   test('Reading and action colors have AA contrast in both system themes', () {

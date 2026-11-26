@@ -69,23 +69,16 @@ flutter:
   # the material Icons class.
   uses-material-design: true
   assets:
-    - assets/fonts/manrope/OFL.txt
-    - assets/fonts/bitter/OFL.txt
+    - assets/branding/unitbv.png
   fonts:
-    - family: Manrope
+    - family: UT Sans
       fonts:
-        - asset: assets/fonts/manrope/manrope.ttf
+        - asset: assets/fonts/UT-Sans-TTF/UTSans-Regular.ttf
           weight: 400
-        - asset: assets/fonts/manrope/manrope.ttf
-          weight: 600
-        - asset: assets/fonts/manrope/manrope.ttf
+        - asset: assets/fonts/UT-Sans-TTF/UTSans-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/UT-Sans-TTF/UTSans-Bold.ttf
           weight: 700
-    - family: Bitter
-      fonts:
-        - asset: assets/fonts/bitter/bitter.ttf
-          weight: 400
-        - asset: assets/fonts/bitter/bitter.ttf
-          weight: 600
 
   # To add assets to your application, add an assets section, like this:
   # assets:

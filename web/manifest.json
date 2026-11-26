@@ -1,11 +1,11 @@
 {
-    "name": "Știri și favorite",
-    "short_name": "Știri",
+    "name": "Știri UNITBV",
+    "short_name": "Știri UNITBV",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#F3F6FC",
     "theme_color": "#1557CD",
-    "description": "Știri Hacker News, favorite și export în calendar.",
+    "description": "Știri UNITBV, favorite și export în calendar.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

@@ -1,9 +1,44 @@
 # The drawing below is the editable source of the launcher icon. No external packages.
 [CmdletBinding()]
-param()
+param([switch]$AndroidOnly)
 $ErrorActionPreference = 'Stop'
 $projectPath = Split-Path -Parent $PSScriptRoot
 Add-Type -AssemblyName System.Drawing
+
+function Save-AndroidIcons {
+    $source = Join-Path $projectPath 'assets/branding/unitbv.png'
+    $resources = Join-Path $projectPath 'android/app/src/main/res'
+    $drawable = Join-Path $resources 'drawable-nodpi'
+    New-Item -ItemType Directory -Path $drawable -Force | Out-Null
+    Copy-Item -LiteralPath $source -Destination (Join-Path $drawable 'ic_launcher_mark.png') -Force
+
+    $mark = [Drawing.Image]::FromFile($source)
+    $background = [Drawing.ColorTranslator]::FromHtml('#0064A0')
+    $sizes = @{ mdpi = 48; hdpi = 72; xhdpi = 96; xxhdpi = 144; xxxhdpi = 192 }
+    try {
+        foreach ($density in $sizes.Keys) {
+            $size = $sizes[$density]
+            $edge = [int]($size * .58)
+            $inset = [int](($size - $edge) / 2)
+            $bitmap = [Drawing.Bitmap]::new($size, $size)
+            $graphics = [Drawing.Graphics]::FromImage($bitmap)
+            try {
+                $graphics.Clear($background)
+                $graphics.InterpolationMode = [Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+                $graphics.DrawImage($mark, $inset, $inset, $edge, $edge)
+                $bitmap.Save((Join-Path $resources "mipmap-$density/ic_launcher.png"), [Drawing.Imaging.ImageFormat]::Png)
+            } finally {
+                $graphics.Dispose()
+                $bitmap.Dispose()
+            }
+        }
+    } finally {
+        $mark.Dispose()
+    }
+}
+
+Save-AndroidIcons
+if ($AndroidOnly) { return }
 
 $master = [Drawing.Bitmap]::new(1024, 1024, [Drawing.Imaging.PixelFormat]::Format24bppRgb)
 $canvas = [Drawing.Graphics]::FromImage($master)
@@ -33,21 +68,6 @@ try {
     }
     $canvas.FillPolygon($gold, $star)
     $canvas.DrawPolygon($outline, $star)
-    $numbers = [Globalization.CultureInfo]::InvariantCulture
-    $starPath = 'M' + (($star | ForEach-Object { $_.X.ToString('0.###', $numbers) + ',' + $_.Y.ToString('0.###', $numbers) }) -join ' L') + ' Z'
-    $vectorPath = Join-Path $projectPath 'android/app/src/main/res/drawable/ic_launcher_foreground.xml'
-    $vector = @"
-<?xml version="1.0" encoding="utf-8"?>
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp" android:height="108dp" android:viewportWidth="1024" android:viewportHeight="1024">
-    <group android:pivotX="512" android:pivotY="512" android:scaleX="0.84" android:scaleY="0.84">
-    <path android:fillColor="#FFFFFF" android:pathData="M254,256 H770 V760 H254 Z" />
-    <path android:fillColor="#1565C0" android:pathData="M296,302 h430 v76 h-430 Z M296,420 h158 v150 h-158 Z M490,420 h236 v24 h-236 Z M490,482 h236 v24 h-236 Z M490,544 h150 v24 h-150 Z M296,614 h216 v24 h-216 Z M296,678 h216 v24 h-216 Z" />
-    <path android:fillColor="#FFCA28" android:strokeColor="#1565C0" android:strokeWidth="18" android:strokeLineJoin="round" android:pathData="$starPath" />
-    </group>
-</vector>
-"@
-    [IO.File]::WriteAllText($vectorPath, $vector, [Text.UTF8Encoding]::new($false))
 } finally {
     $canvas.Dispose()
     $paper.Dispose()
@@ -74,10 +94,6 @@ function Save-Icon([string]$RelativePath, [int]$Size) {
 
 try {
     Save-Icon 'assets/branding/app-icon.png' 1024
-    $android = @{ mdpi = 48; hdpi = 72; xhdpi = 96; xxhdpi = 144; xxxhdpi = 192 }
-    foreach ($density in $android.Keys) {
-        Save-Icon "android/app/src/main/res/mipmap-$density/ic_launcher.png" $android[$density]
-    }
     $iconFolder = 'ios/Runner/Assets.xcassets/AppIcon.appiconset'
     $catalog = Get-Content -LiteralPath (Join-Path $projectPath "$iconFolder/Contents.json") -Raw | ConvertFrom-Json
     foreach ($entry in $catalog.images) {
@@ -93,4 +109,4 @@ try {
 } finally {
     $master.Dispose()
 }
-Write-Host 'Iconitele Android, iOS si web au fost generate din acelasi desen.'
+Write-Host 'Iconitele Android, iOS si web au fost generate.'

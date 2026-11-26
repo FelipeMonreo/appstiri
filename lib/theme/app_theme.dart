@@ -3,52 +3,47 @@ import 'package:flutter/services.dart';
 
 /// Semantic colors keep every screen in sync with the phone's system theme.
 abstract final class AppTheme {
-  static const blue = Color(0xFF1557CD);
-  static const charcoal = Color(0xFF191B20);
+  static const brand = Color(0xFF0064A0);
+  static const charcoal = Color(0xFF121212);
   static ThemeData get light => _build(Brightness.light);
   static ThemeData get dark => _build(Brightness.dark);
 
   static ThemeData _build(Brightness brightness) {
     final dark = brightness == Brightness.dark;
     final scheme =
-        ColorScheme.fromSeed(
-          seedColor: dark ? const Color(0xFF858A95) : blue,
-          brightness: brightness,
-        ).copyWith(
-          primary: dark ? const Color(0xFFF4F5F7) : blue,
+        ColorScheme.fromSeed(seedColor: brand, brightness: brightness).copyWith(
+          primary: dark ? const Color(0xFFEF9348) : brand,
           onPrimary: dark ? charcoal : Colors.white,
-          primaryContainer: dark
-              ? const Color(0xFF343841)
-              : const Color(0xFFE5EDFF),
-          onPrimaryContainer: dark ? Colors.white : const Color(0xFF113C8C),
-          secondary: dark ? const Color(0xFFD6D9DF) : const Color(0xFF315A98),
+          primaryContainer: dark ? const Color(0xFFEF9348) : brand,
+          onPrimaryContainer: dark ? charcoal : Colors.white,
+          secondary: dark ? const Color(0xFFEAC6AD) : const Color(0xFF365E7B),
           onSecondary: dark ? charcoal : Colors.white,
           secondaryContainer: dark
-              ? const Color(0xFF343841)
-              : const Color(0xFFE5EDFF),
-          onSecondaryContainer: dark ? Colors.white : const Color(0xFF113C8C),
-          surface: dark ? const Color(0xFF24272D) : Colors.white,
+              ? const Color(0xFF4C3020)
+              : const Color(0xFFDAE9F6),
+          onSecondaryContainer: dark ? Colors.white : const Color(0xFF123A57),
+          surface: dark ? const Color(0xFF212121) : const Color(0xFFFEF7FF),
           onSurface: dark ? const Color(0xFFF4F5F7) : const Color(0xFF17233A),
           onSurfaceVariant: dark
               ? const Color(0xFFB9BEC8)
               : const Color(0xFF526078),
-          surfaceContainerLowest: dark ? charcoal : const Color(0xFFF3F6FC),
+          surfaceContainerLowest: dark ? charcoal : const Color(0xFFF3EEF5),
           surfaceContainerLow: dark
               ? const Color(0xFF202329)
-              : const Color(0xFFEDF2FC),
+              : const Color(0xFFF3EDF7),
           surfaceContainer: dark
               ? const Color(0xFF2C3037)
-              : const Color(0xFFE9EFFA),
+              : const Color(0xFFECE5F0),
           surfaceContainerHigh: dark
               ? const Color(0xFF343841)
-              : const Color(0xFFE2EAFA),
+              : const Color(0xFFE8E0ED),
           surfaceContainerHighest: dark
               ? const Color(0xFF3B404A)
-              : const Color(0xFFDAE5F8),
+              : const Color(0xFFE2DAE7),
           outline: dark ? const Color(0xFF89919F) : const Color(0xFF7686A0),
           outlineVariant: dark
               ? const Color(0xFF414650)
-              : const Color(0xFFD3DDEF),
+              : const Color(0xFFDAD2DF),
           error: dark ? const Color(0xFFFFB4AB) : const Color(0xFFAA242C),
           errorContainer: dark
               ? const Color(0xFF48272C)
@@ -61,78 +56,78 @@ abstract final class AppTheme {
       useMaterial3: true,
       brightness: brightness,
       colorScheme: scheme,
-      fontFamily: 'Manrope',
+      fontFamily: 'UT Sans',
       scaffoldBackgroundColor: scheme.surfaceContainerLowest,
       visualDensity: VisualDensity.standard,
       materialTapTargetSize: MaterialTapTargetSize.padded,
     );
     final text = base.textTheme.copyWith(
       displaySmall: TextStyle(
-        fontFamily: 'Bitter',
+        fontFamily: 'UT Sans',
         fontSize: 44,
         height: 1.12,
-        fontWeight: FontWeight.w600,
+        fontWeight: FontWeight.w500,
         letterSpacing: -1.3,
         color: scheme.onSurface,
       ),
       headlineLarge: TextStyle(
-        fontFamily: 'Bitter',
-        fontSize: 36,
+        fontFamily: 'UT Sans',
+        fontSize: 32,
         height: 1.18,
-        fontWeight: FontWeight.w600,
+        fontWeight: FontWeight.w500,
         letterSpacing: -0.8,
         color: scheme.onSurface,
       ),
       headlineMedium: TextStyle(
-        fontFamily: 'Bitter',
+        fontFamily: 'UT Sans',
         fontSize: 30,
         height: 1.22,
-        fontWeight: FontWeight.w600,
+        fontWeight: FontWeight.w500,
         letterSpacing: -0.5,
         color: scheme.onSurface,
       ),
       headlineSmall: TextStyle(
-        fontFamily: 'Bitter',
-        fontSize: 25,
+        fontFamily: 'UT Sans',
+        fontSize: 22,
         height: 1.28,
-        fontWeight: FontWeight.w600,
+        fontWeight: FontWeight.w500,
         letterSpacing: -0.3,
         color: scheme.onSurface,
       ),
       titleLarge: TextStyle(
-        fontFamily: 'Manrope',
+        fontFamily: 'UT Sans',
         fontSize: 21,
         height: 1.35,
         fontWeight: FontWeight.w700,
         color: scheme.onSurface,
       ),
       titleMedium: TextStyle(
-        fontFamily: 'Manrope',
+        fontFamily: 'UT Sans',
         fontSize: 16,
         height: 1.5,
-        fontWeight: FontWeight.w600,
+        fontWeight: FontWeight.w500,
         color: scheme.onSurface,
       ),
       bodyLarge: TextStyle(
-        fontFamily: 'Manrope',
+        fontFamily: 'UT Sans',
         fontSize: 17,
         height: 1.65,
         color: scheme.onSurface,
       ),
       bodyMedium: TextStyle(
-        fontFamily: 'Manrope',
+        fontFamily: 'UT Sans',
         fontSize: 15,
         height: 1.55,
         color: scheme.onSurface,
       ),
       bodySmall: TextStyle(
-        fontFamily: 'Manrope',
+        fontFamily: 'UT Sans',
         fontSize: 13,
         height: 1.5,
         color: scheme.onSurfaceVariant,
       ),
       labelLarge: TextStyle(
-        fontFamily: 'Manrope',
+        fontFamily: 'UT Sans',
         fontSize: 15,
         height: 1.35,
         fontWeight: FontWeight.w700,
@@ -144,13 +139,20 @@ abstract final class AppTheme {
     );
     return base.copyWith(
       textTheme: text,
+      scrollbarTheme: const ScrollbarThemeData(
+        thumbColor: WidgetStatePropertyAll(Colors.transparent),
+        trackColor: WidgetStatePropertyAll(Colors.transparent),
+        trackBorderColor: WidgetStatePropertyAll(Colors.transparent),
+        thickness: WidgetStatePropertyAll(0),
+        interactive: false,
+      ),
       appBarTheme: AppBarTheme(
         backgroundColor: scheme.surfaceContainerLowest,
         foregroundColor: scheme.onSurface,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
-        toolbarHeight: 72,
+        toolbarHeight: 60,
         centerTitle: false,
         titleTextStyle: text.titleMedium,
         systemOverlayStyle:
@@ -165,6 +167,8 @@ abstract final class AppTheme {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
+          backgroundColor: scheme.primary,
+          foregroundColor: scheme.onPrimary,
           minimumSize: const Size(56, 56),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           shape: shape,
@@ -193,15 +197,17 @@ abstract final class AppTheme {
         style: IconButton.styleFrom(minimumSize: const Size(52, 52)),
       ),
       navigationBarTheme: NavigationBarThemeData(
-        height: 80,
-        backgroundColor: scheme.surface,
+        height: 72,
+        backgroundColor: dark
+            ? const Color(0xFF17141B)
+            : const Color(0xFFF3EDF7),
         surfaceTintColor: Colors.transparent,
         indicatorColor: scheme.primaryContainer,
         iconTheme: WidgetStateProperty.resolveWith(
           (states) => IconThemeData(
             size: 25,
             color: states.contains(WidgetState.selected)
-                ? scheme.primary
+                ? scheme.onPrimaryContainer
                 : scheme.onSurfaceVariant,
           ),
         ),

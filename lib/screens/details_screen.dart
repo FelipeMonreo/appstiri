@@ -6,19 +6,64 @@ import '../models/article_summary.dart';
 import '../services/app_exception.dart';
 import '../widgets/article_card.dart';
 import '../widgets/reader_components.dart';
+import '../widgets/reader_language.dart';
 
-/// Keeps the platform's back gesture and predictive-back transition. There is
-/// no timer or assumed 60 Hz; Flutter's animation ticker follows display frames.
-class ArticleRoute extends MaterialPageRoute<void> {
-  ArticleRoute({required super.builder, required this.reducedMotion})
-    : super(settings: const RouteSettings(name: '/article'));
+/// Keeps the source visible behind a modal reader with its own focus scope.
+class ArticleRoute extends PageRoute<void> {
+  ArticleRoute({
+    required this.builder,
+    required this.reducedMotion,
+    required this.closeLabel,
+  }) : super(
+         settings: const RouteSettings(name: '/article'),
+         allowSnapshotting: false,
+         traversalEdgeBehavior: TraversalEdgeBehavior.closedLoop,
+       );
+  final WidgetBuilder builder;
   final bool reducedMotion;
+  final String closeLabel;
   // Hero temporarily completes ModalRoute.animation for its offstage measure.
   // Listen to the real controller so that measure cannot start network work.
   Animation<double>? get entranceAnimation => controller?.view;
   @override
+  bool get opaque => false;
+  @override
+  bool get maintainState => true;
+  @override
+  Color get barrierColor => Colors.black54;
+  @override
+  bool get barrierDismissible => true;
+  @override
+  String get barrierLabel => closeLabel;
+
+  @override
+  Widget buildPage(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+  ) => LayoutBuilder(
+    builder: (context, constraints) {
+      final wide = constraints.maxWidth >= 720;
+      return Center(
+        child: SizedBox(
+          width: wide ? constraints.maxWidth * .70 : constraints.maxWidth - 24,
+          height: constraints.maxHeight * .70,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: Semantics(
+              scopesRoute: true,
+              explicitChildNodes: true,
+              child: Builder(builder: builder),
+            ),
+          ),
+        ),
+      );
+    },
+  );
+
+  @override
   Duration get transitionDuration =>
-      reducedMotion ? Duration.zero : const Duration(milliseconds: 360);
+      reducedMotion ? Duration.zero : const Duration(milliseconds: 460);
   @override
   Duration get reverseTransitionDuration =>
       reducedMotion ? Duration.zero : const Duration(milliseconds: 280);
@@ -28,9 +73,19 @@ class ArticleRoute extends MaterialPageRoute<void> {
     Animation<double> animation,
     Animation<double> secondaryAnimation,
     Widget child,
-  ) => reducedMotion
-      ? child
-      : super.buildTransitions(context, animation, secondaryAnimation, child);
+  ) => ReaderPanelBackdrop(
+    child: reducedMotion
+        ? child
+        : FadeTransition(
+            opacity: animation.drive(CurveTween(curve: Curves.easeInOutCubic)),
+            child: ScaleTransition(
+              scale: animation
+                  .drive(CurveTween(curve: Curves.easeOutCubic))
+                  .drive(Tween<double>(begin: .94, end: 1)),
+              child: child,
+            ),
+          ),
+  );
 }
 
 class DetailsScreen extends StatefulWidget {
@@ -112,8 +167,9 @@ class _DetailsScreenState extends State<DetailsScreen> {
     } catch (e) {
       if (mounted) {
         setState(
-          () => _error =
-              '${e is AppException ? e.message : 'Detaliile nu au putut fi încărcate.'} Sunt afișate datele salvate.',
+          () => _error = e is AppException
+              ? e.message
+              : 'Detaliile nu au putut fi încărcate.',
         );
       }
     } finally {
@@ -148,8 +204,9 @@ class _DetailsScreenState extends State<DetailsScreen> {
       await widget.controller.toggleFavorite(_article);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(e.toString())));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.localizedMessage(e.toString()))),
+        );
       }
     }
   }
@@ -169,22 +226,19 @@ class _DetailsScreenState extends State<DetailsScreen> {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     return Scaffold(
+      extendBody: true,
       appBar: AppBar(
-        title: const Text('Detaliile știrii'),
+        title: Text(context.tr('Detaliile știrii', 'Article details')),
         actions: [
           IconButton(
-            tooltip: 'Actualizează detaliile',
+            tooltip: context.tr('Actualizează detaliile', 'Refresh details'),
             onPressed: _loading || _summaryLoading ? null : _load,
-            icon: const Icon(Icons.refresh_rounded),
+            icon: ReaderRefreshIcon(refreshing: _loading || _summaryLoading),
           ),
           const SizedBox(width: 8),
         ],
       ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: colors.surface,
-          border: Border(top: BorderSide(color: colors.outlineVariant)),
-        ),
+      bottomNavigationBar: ReaderGlassBar(
         child: SafeArea(
           top: false,
           child: Padding(
@@ -200,8 +254,14 @@ class _DetailsScreenState extends State<DetailsScreen> {
                     icon: const Icon(Icons.open_in_new_rounded),
                     label: Text(
                       _openingExternal
-                          ? 'Se deschide articolul…'
-                          : 'Citește articolul complet',
+                          ? context.tr(
+                              'Se deschide articolul…',
+                              'Opening article…',
+                            )
+                          : context.tr(
+                              'Citește articolul complet',
+                              'Read full article',
+                            ),
                     ),
                   ),
                 ),
@@ -218,58 +278,38 @@ class _DetailsScreenState extends State<DetailsScreen> {
             constraints: const BoxConstraints(maxWidth: 768),
             child: ListView(
               key: const PageStorageKey('article-reader'),
+              physics: readerScrollPhysics(context),
               padding: const EdgeInsets.fromLTRB(24, 20, 24, 36),
               children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.language_rounded,
-                      size: 18,
-                      color: colors.primary,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        articleSource(_article),
-                        style: theme.textTheme.bodyMedium!.copyWith(
-                          color: colors.primary,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
                 ArticleHeadline(
                   article: _article,
                   style: theme.textTheme.headlineLarge,
                 ),
-                const SizedBox(height: 24),
-                Text(
-                  'Autor: ${_article.author}',
-                  style: theme.textTheme.titleMedium,
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Publicată: ${publicationLabel(_article)}',
-                  style: theme.textTheme.bodySmall,
-                ),
                 const SizedBox(height: 12),
                 Wrap(
-                  spacing: 20,
-                  runSpacing: 8,
+                  spacing: 12,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text(
-                      '${_article.points} puncte',
+                      articleSource(_article),
+                      style: theme.textTheme.bodySmall!.copyWith(
+                        color: colors.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      '${context.tr('Autor', 'Author')}: ${_article.author}',
                       style: theme.textTheme.bodySmall,
                     ),
                     Text(
-                      '${_article.comments} comentarii',
+                      '${context.tr('Publicată', 'Published')}: ${publicationLabel(context, _article)}',
                       style: theme.textTheme.bodySmall,
                     ),
+                    ArticleActivity(article: _article),
                   ],
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 12),
                 ListenableBuilder(
                   listenable: widget.controller,
                   builder: (context, _) {
@@ -281,26 +321,39 @@ class _DetailsScreenState extends State<DetailsScreen> {
                               !widget.controller.storageReady
                           ? null
                           : _favorite,
-                      icon: Icon(
-                        saved
-                            ? Icons.bookmark_added_rounded
-                            : Icons.bookmark_add_outlined,
+                      icon: FavoriteIcon(
+                        saved: saved,
+                        enabled:
+                            !widget.controller.savingFavorite &&
+                            widget.controller.storageReady,
                       ),
                       label: Text(
-                        saved ? 'Scoate din favorite' : 'Adaugă la favorite',
+                        saved
+                            ? context.tr(
+                                'Scoate din favorite',
+                                'Remove from favorites',
+                              )
+                            : context.tr(
+                                'Adaugă la favorite',
+                                'Add to favorites',
+                              ),
                       ),
                     );
                   },
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 16),
                 const Divider(),
-                const SizedBox(height: 28),
+                const SizedBox(height: 16),
                 if (_error != null)
                   ReaderNotice(
-                    message: _error!,
+                    message:
+                        '${context.localizedMessage(_error!)} ${context.tr('Sunt afișate datele salvate.', 'Showing saved details.')}',
                     onRetry: _loading ? null : _load,
                   ),
-                Text('Rezumatul știrii', style: theme.textTheme.headlineSmall),
+                Text(
+                  context.tr('Rezumatul știrii', 'Article summary'),
+                  style: theme.textTheme.titleLarge,
+                ),
                 const SizedBox(height: 18),
                 AnimatedSwitcher(
                   duration: motionDuration(context, 220),
@@ -312,7 +365,11 @@ class _DetailsScreenState extends State<DetailsScreen> {
                 const Divider(),
                 const SizedBox(height: 24),
                 Text(
-                  'Pentru mai multe informații, accesează articolul complet de la sursa originală.',
+                  context.tr(
+                    'Pentru mai multe informații, accesează articolul complet de la sursa originală.',
+                    'For more information, read the full article at the original source.',
+                  ),
+                  textAlign: TextAlign.start,
                   style: theme.textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 12),
@@ -320,6 +377,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
                   _article.browserUrl.toString(),
                   style: theme.textTheme.bodySmall,
                 ),
+                const SafeArea(top: false, child: SizedBox.shrink()),
               ],
             ),
           ),
@@ -340,8 +398,11 @@ class _DetailsScreenState extends State<DetailsScreen> {
           const SizedBox(height: 12),
           Semantics(
             liveRegion: true,
-            child: const Text(
-              'Se citește articolul și se pregătește rezumatul…',
+            child: Text(
+              context.tr(
+                'Se citește articolul și se pregătește rezumatul…',
+                'Reading the article and preparing the summary…',
+              ),
             ),
           ),
           const SizedBox(height: 16),
@@ -352,6 +413,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
               padding: const EdgeInsets.only(bottom: 22),
               child: SelectableText(
                 sentence,
+                textAlign: TextAlign.start,
                 style: theme.textTheme.bodyLarge!.copyWith(
                   fontSize: 18,
                   height: 1.75,
@@ -359,7 +421,10 @@ class _DetailsScreenState extends State<DetailsScreen> {
               ),
             ),
           Text(
-            'Rezumat automat, în limba articolului original.',
+            context.tr(
+              'Rezumat automat, în limba articolului original.',
+              'Automatic summary in the original language.',
+            ),
             style: theme.textTheme.bodySmall,
           ),
         ],
@@ -370,7 +435,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
                 ? null
                 : () => _loadSummary(_article, refresh: true),
             icon: const Icon(Icons.refresh_rounded),
-            label: const Text('Reîncearcă rezumatul'),
+            label: Text(context.tr('Reîncearcă rezumatul', 'Retry summary')),
           ),
         ],
       ],

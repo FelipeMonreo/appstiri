@@ -1,5 +1,5 @@
 import 'package:material_ui/material_ui.dart';
-import 'package:intl/intl.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../controllers/news_controller.dart';
@@ -8,13 +8,22 @@ import '../services/app_exception.dart';
 import '../services/calendar/calendar_service.dart';
 import '../widgets/article_card.dart';
 import '../widgets/reader_components.dart';
+import '../widgets/reader_language.dart';
 import 'details_screen.dart';
 import 'export_dialog.dart';
 
 class NewsScreen extends StatefulWidget {
-  const NewsScreen({super.key, this.controller, this.calendar});
+  const NewsScreen({
+    super.key,
+    this.controller,
+    this.calendar,
+    this.onToggleLanguage,
+    this.logoKey,
+  });
   final NewsController? controller;
   final CalendarService? calendar;
+  final VoidCallback? onToggleLanguage;
+  final Key? logoKey;
   @override
   State<NewsScreen> createState() => _NewsScreenState();
 }
@@ -55,13 +64,20 @@ class _NewsScreenState extends State<NewsScreen> {
     final wasFavorite = _controller.isFavorite(article.id);
     try {
       await _controller.toggleFavorite(article);
+      if (!mounted) return;
       _message(
         wasFavorite
-            ? 'Știrea a fost ștearsă din favorite.'
-            : 'Știrea a fost salvată la favorite.',
+            ? context.tr(
+                'Știrea a fost ștearsă din favorite.',
+                'Article removed from favorites.',
+              )
+            : context.tr(
+                'Știrea a fost salvată la favorite.',
+                'Article added to favorites.',
+              ),
       );
     } catch (e) {
-      _message(e.toString());
+      if (mounted) _message(context.localizedMessage(e.toString()));
     }
   }
 
@@ -75,8 +91,12 @@ class _NewsScreenState extends State<NewsScreen> {
         throw const AppException('Articolul nu a putut fi deschis.');
       }
     } catch (_) {
+      if (!mounted) return;
       _message(
-        'Browserul nu a putut deschide articolul. Verifică setările sau folosește linkul din detalii.',
+        context.tr(
+          'Browserul nu a putut deschide articolul. Verifică setările sau folosește linkul din detalii.',
+          'The browser could not open the article. Check its settings or use the link in the article details.',
+        ),
       );
     }
   }
@@ -88,6 +108,7 @@ class _NewsScreenState extends State<NewsScreen> {
       await Navigator.of(context).push(
         ArticleRoute(
           reducedMotion: reduceReaderMotion(context),
+          closeLabel: context.tr('Închide detaliile', 'Close article details'),
           builder: (_) => DetailsScreen(
             article: article,
             controller: _controller,
@@ -106,10 +127,14 @@ class _NewsScreenState extends State<NewsScreen> {
       final result = await showDialog<CalendarExportResult>(
         context: context,
         barrierDismissible: false,
-        builder: (_) =>
-            ExportDialog(articles: _controller.favorites, calendar: _calendar),
+        builder: (_) => ReaderPanelBackdrop(
+          child: ExportDialog(
+            articles: _controller.favorites,
+            calendar: _calendar,
+          ),
+        ),
       );
-      if (result != null) _message(result.message);
+      if (mounted && result != null) _message(context.calendarResult(result));
     } finally {
       if (mounted) setState(() => _exporting = false);
     }
@@ -120,74 +145,134 @@ class _NewsScreenState extends State<NewsScreen> {
     listenable: _controller,
     builder: (context, _) {
       final theme = Theme.of(context);
+      final colors = theme.colorScheme;
+      final dark = theme.brightness == Brightness.dark;
+      final headerText = dark ? colors.onSurface : Colors.white;
+      final wide =
+          MediaQuery.sizeOf(context).width >= 840 &&
+          MediaQuery.textScalerOf(context).scale(13) <= 18;
+      final favoritesLabel =
+          '${context.tr('Favorite', 'Favorites')} (${_controller.favorites.length})';
       final favoritesPage = _page == 1;
       final articles = favoritesPage
           ? _controller.favorites
           : _controller.articles;
       return Scaffold(
+        extendBody: !wide,
         appBar: AppBar(
           automaticallyImplyLeading: false,
+          backgroundColor: dark
+              ? theme.scaffoldBackgroundColor
+              : colors.primary,
+          foregroundColor: headerText,
+          systemOverlayStyle: SystemUiOverlayStyle.light,
+          toolbarHeight:
+              72 +
+              (MediaQuery.textScalerOf(context).scale(14) - 14).clamp(
+                0.0,
+                24.0,
+              ),
           title: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 1024),
               child: Row(
                 children: [
-                  Icon(
-                    Icons.auto_stories_rounded,
-                    color: theme.colorScheme.primary,
-                    size: 27,
+                  Image.asset(
+                    'assets/branding/unitbv.png',
+                    key: widget.logoKey,
+                    width: 36,
+                    height: 36,
+                    semanticLabel: 'Universitatea Transilvania din Brașov',
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 12),
                   Expanded(
-                    child: Semantics(
-                      label: 'Știri și favorite',
-                      excludeSemantics: true,
-                      child: Text(
-                        'Știri.',
-                        style: theme.textTheme.headlineMedium,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                    child: ReaderHeaderTitle(
+                      title: context.tr('Știri UNITBV', 'UNITBV News'),
+                      style: theme.textTheme.titleLarge!.copyWith(
+                        color: headerText,
                       ),
                     ),
                   ),
-                  if (MediaQuery.sizeOf(context).width >= 460 &&
-                      MediaQuery.textScalerOf(context).scale(13) < 19)
-                    Text(
-                      DateFormat('d MMMM', 'ro').format(DateTime.now()),
-                      style: theme.textTheme.bodySmall,
+                  if (widget.onToggleLanguage != null)
+                    Tooltip(
+                      message: context.tr(
+                        'Schimbă limba în engleză',
+                        'Switch language to Romanian',
+                      ),
+                      child: TextButton(
+                        onPressed: widget.onToggleLanguage,
+                        style: TextButton.styleFrom(
+                          foregroundColor: headerText,
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                        ),
+                        child: Text(context.tr('RO', 'EN')),
+                      ),
                     ),
-                  const SizedBox(width: 12),
-                  ExcludeSemantics(
-                    child: Icon(
-                      theme.brightness == Brightness.dark
-                          ? Icons.dark_mode_outlined
-                          : Icons.light_mode_outlined,
-                      color: theme.colorScheme.onSurfaceVariant,
-                      size: 20,
+                  if (!favoritesPage)
+                    IconButton(
+                      tooltip: context.tr(
+                        'Actualizează știrile',
+                        'Refresh news',
+                      ),
+                      color: headerText,
+                      disabledColor: headerText.withValues(alpha: .78),
+                      onPressed: _controller.loading
+                          ? null
+                          : _controller.refresh,
+                      icon: ReaderRefreshIcon(refreshing: _controller.loading),
                     ),
-                  ),
+                  if (wide)
+                    SegmentedButton<int>(
+                      key: const ValueKey('main-navigation'),
+                      style: SegmentedButton.styleFrom(
+                        foregroundColor: headerText,
+                        selectedBackgroundColor: dark
+                            ? colors.primary
+                            : Colors.white,
+                        selectedForegroundColor: dark
+                            ? colors.onPrimary
+                            : colors.primary,
+                        side: BorderSide(color: headerText),
+                      ),
+                      segments: [
+                        ButtonSegment(
+                          value: 0,
+                          icon: const Icon(Icons.newspaper_outlined),
+                          label: Text(context.tr('Toate știrile', 'All news')),
+                        ),
+                        ButtonSegment(
+                          value: 1,
+                          icon: const Icon(Icons.bookmarks_outlined),
+                          label: Text(favoritesLabel),
+                        ),
+                      ],
+                      selected: {_page},
+                      onSelectionChanged: (pages) =>
+                          setState(() => _page = pages.single),
+                    ),
                 ],
               ),
             ),
           ),
         ),
-        bottomNavigationBar: NavigationBar(
-          key: const ValueKey('main-navigation'),
-          selectedIndex: _page,
-          onDestinationSelected: (page) => setState(() => _page = page),
-          destinations: [
-            const NavigationDestination(
-              icon: Icon(Icons.newspaper_outlined),
-              selectedIcon: Icon(Icons.newspaper_rounded),
-              label: 'Toate știrile',
-            ),
-            NavigationDestination(
-              icon: const Icon(Icons.bookmarks_outlined),
-              selectedIcon: const Icon(Icons.bookmarks_rounded),
-              label: 'Favorite (${_controller.favorites.length})',
-            ),
-          ],
-        ),
+        bottomNavigationBar: wide
+            ? null
+            : ReaderBottomNavigation(
+                selectedIndex: _page,
+                onDestinationSelected: (page) => setState(() => _page = page),
+                destinations: [
+                  NavigationDestination(
+                    icon: const Icon(Icons.newspaper_outlined),
+                    selectedIcon: const Icon(Icons.newspaper_rounded),
+                    label: context.tr('Toate știrile', 'All news'),
+                  ),
+                  NavigationDestination(
+                    icon: const Icon(Icons.bookmarks_outlined),
+                    selectedIcon: const Icon(Icons.bookmarks_rounded),
+                    label: favoritesLabel,
+                  ),
+                ],
+              ),
         body: SafeArea(
           bottom: false,
           child: Align(
@@ -200,22 +285,22 @@ class _NewsScreenState extends State<NewsScreen> {
                   key: PageStorageKey(
                     favoritesPage ? 'saved-stories' : 'front-page',
                   ),
-                  physics: const AlwaysScrollableScrollPhysics(),
+                  physics: readerScrollPhysics(context),
                   slivers: [
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-                      sliver: SliverToBoxAdapter(
-                        child: _ReaderHeader(
-                          favorites: favoritesPage,
-                          loading: _controller.loading,
-                          exporting: _exporting,
-                          canExport:
-                              articles.isNotEmpty && _calendar.isAvailable,
-                          onRefresh: _controller.refresh,
-                          onExport: _export,
+                    if (favoritesPage)
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+                        sliver: SliverToBoxAdapter(
+                          child: _FavoritesHeader(
+                            exporting: _exporting,
+                            canExport:
+                                articles.isNotEmpty && _calendar.isAvailable,
+                            onExport: _export,
+                          ),
                         ),
                       ),
-                    ),
+                    if (!favoritesPage)
+                      const SliverToBoxAdapter(child: SizedBox(height: 12)),
                     if (_controller.initializing)
                       const SliverFillRemaining(
                         hasScrollBody: false,
@@ -243,7 +328,7 @@ class _NewsScreenState extends State<NewsScreen> {
                               if (!favoritesPage && _controller.error != null)
                                 ReaderNotice(
                                   message:
-                                      '${_controller.error!}${articles.isNotEmpty ? ' Sunt afișate ultimele știri salvate.' : ''}',
+                                      '${context.localizedMessage(_controller.error!)}${articles.isNotEmpty ? context.tr(' Sunt afișate ultimele știri salvate.', ' Showing the most recently cached news.') : ''}',
                                   onRetry: _controller.loading
                                       ? null
                                       : _controller.refresh,
@@ -253,10 +338,13 @@ class _NewsScreenState extends State<NewsScreen> {
                                 const SizedBox(height: 16),
                               ],
                               if (favoritesPage && !_calendar.isAvailable)
-                                const Padding(
-                                  padding: EdgeInsets.only(bottom: 16),
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 16),
                                   child: Text(
-                                    'Exportul este disponibil în browser și în aplicația Android/iOS.',
+                                    context.tr(
+                                      'Exportul este disponibil în browser și în aplicația Android/iOS.',
+                                      'Export is available in the browser and in the Android/iOS app.',
+                                    ),
                                   ),
                                 ),
                             ],
@@ -279,10 +367,8 @@ class _NewsScreenState extends State<NewsScreen> {
                           itemCount: articles.length,
                           itemBuilder: (context, index) {
                             final article = articles[index];
-                            return ArticleCard(
-                              key: ValueKey(article.id),
+                            final card = ArticleCard(
                               article: article,
-                              featured: index == 0 && !favoritesPage,
                               favorite: _controller.isFavorite(article.id),
                               showRemove: favoritesPage,
                               onFavorite:
@@ -293,10 +379,20 @@ class _NewsScreenState extends State<NewsScreen> {
                               onDetails: () => _details(article),
                               onOpen: () => _open(article),
                             );
+                            return ReaderIntroCard(
+                              key: ValueKey(article.id),
+                              index: index,
+                              child: card,
+                            );
                           },
                         ),
                       ),
-                      const SliverToBoxAdapter(child: SizedBox(height: 28)),
+                      const SliverToBoxAdapter(
+                        child: SafeArea(
+                          top: false,
+                          child: SizedBox(height: 28),
+                        ),
+                      ),
                     ],
                   ],
                 ),
@@ -309,81 +405,49 @@ class _NewsScreenState extends State<NewsScreen> {
   );
 }
 
-class _ReaderHeader extends StatelessWidget {
-  const _ReaderHeader({
-    required this.favorites,
-    required this.loading,
+class _FavoritesHeader extends StatelessWidget {
+  const _FavoritesHeader({
     required this.exporting,
     required this.canExport,
-    required this.onRefresh,
     required this.onExport,
   });
-  final bool favorites;
-  final bool loading;
   final bool exporting;
   final bool canExport;
-  final VoidCallback onRefresh;
   final VoidCallback onExport;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final title = Text(
+      context.tr('Favorite', 'Favorites'),
+      style: Theme.of(context).textTheme.headlineSmall,
+    );
+    final action = FilledButton.icon(
+      onPressed: !canExport || exporting ? null : onExport,
+      icon: const Icon(Icons.calendar_month_outlined),
+      label: Text(
+        exporting
+            ? context.tr('Se pregătește exportul…', 'Preparing export…')
+            : context.tr(
+                'Exportă favoritele în calendar',
+                'Export favorites to calendar',
+              ),
+      ),
+    );
     return LayoutBuilder(
       builder: (context, constraints) {
-        final wide = constraints.maxWidth >= 720;
-        final copy = Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              favorites ? 'Biblioteca ta.' : 'Lumea tech,\npe îndelete.',
-              style: theme.textTheme.displaySmall!.copyWith(
-                fontSize: wide ? 52 : 38,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              favorites
-                  ? 'Favoritele rămân salvate după închiderea aplicației.'
-                  : 'Știri Hacker News, favorite și idei de păstrat.',
-              style: theme.textTheme.bodyMedium!.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        );
-        final action = favorites
-            ? FilledButton.icon(
-                onPressed: !canExport || exporting ? null : onExport,
-                icon: const Icon(Icons.calendar_month_outlined),
-                label: Text(
-                  exporting
-                      ? 'Se pregătește exportul…'
-                      : 'Exportă favoritele în calendar',
-                ),
-              )
-            : OutlinedButton.icon(
-                onPressed: loading ? null : onRefresh,
-                icon: const Icon(Icons.refresh_rounded),
-                label: Text(
-                  loading ? 'Se încarcă știrile…' : 'Actualizează știrile',
-                ),
-              );
-        if (wide) {
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Expanded(child: copy),
-              const SizedBox(width: 32),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 330),
-                child: action,
-              ),
-            ],
+        if (constraints.maxWidth < 560 ||
+            MediaQuery.textScalerOf(context).scale(15) > 20) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [title, const SizedBox(height: 8), action],
           );
         }
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [copy, const SizedBox(height: 22), action],
+        return Row(
+          children: [
+            Expanded(child: title),
+            const SizedBox(width: 8),
+            action,
+          ],
         );
       },
     );

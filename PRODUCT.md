@@ -17,7 +17,7 @@ People read technology news on their phones in short sessions, save stories loca
 
 ## Binding design requirements
 
-Follow system brightness automatically. Light mode is blue and white; dark mode is charcoal and white. Keep large labeled controls, Romanian copy, readable article typography and a smooth article-opening transition. Preserve native back behavior and accessibility motion preferences. Use native Flutter motion rather than a browser scrolling library.
+Follow system brightness automatically. Use the UNITBV mark, UT Sans and the approved Student@UNITBV reference colors. The light theme uses blue and the dark theme uses orange. Keep large labeled controls, Romanian copy, readable article typography and a smooth article-opening transition. Preserve native back behavior and accessibility motion preferences. Use native Flutter motion rather than a browser scrolling library.
 
 ## Shipping constraints
 
