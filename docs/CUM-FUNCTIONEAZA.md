@@ -25,12 +25,12 @@ Telefonul rulează o copie compilată. De aceea, când editezi codul de pe Windo
 | Loc | Ce conține | Când umbli aici |
 | --- | --- | --- |
 | `lib/main.dart` | Punctul de intrare. Inițializează Flutter și pornește `NewsApp`. | Când schimbi inițializarea aplicației. |
-| `lib/app.dart` | Numele din aplicație, limba română, alegerea temei sistemului și ecranul inițial. | Pentru configurarea generală a interfeței. |
+| `lib/app.dart` | Brandingul, limba RO/EN, tema sistemului și animația de pornire. | Pentru configurarea generală a interfeței. |
 | `lib/theme/app_theme.dart` | Culorile light/dark, fonturile, butoanele și stilurile comune. | Pentru schimbarea aspectului în toate ecranele. |
 | `lib/screens/news_screen.dart` | Lista de știri și pagina de favorite. | Pentru paginile principale și acțiunile lor. |
 | `lib/screens/details_screen.dart` | Detaliile știrii, rezumatul, deschiderea sursei. | Pentru pagina unui articol. |
 | `lib/screens/export_dialog.dart` | Alegerea datei/calendarului și pornirea exportului. | Pentru interacțiunea de export. |
-| `lib/widgets/article_card.dart` | Cardul unei știri. | Pentru cum arată o știre din listă. |
+| `lib/widgets/article_card.dart` | Cardul reutilizat în Știri și Favorite, cu titlu, autor, dată, domeniu, puncte, comentarii și acțiuni. | Pentru cum arată o știre din listă. |
 | `lib/models/article.dart` | Structura unei știri și conversia din/în JSON. | Când adaugi un câmp al știrii sau schimbi interpretarea datelor. |
 | `lib/models/article_summary.dart` | Datele unui rezumat. | Când schimbi ce informații are un rezumat. |
 | `lib/controllers/news_controller.dart` | Starea ecranelor: știri, favorite, încărcare, erori. | Pentru logica care coordonează interfața și serviciile. |
@@ -66,7 +66,7 @@ API-ul este un serviciu extern. Nu avem un server propriu care trebuie ținut po
 
 ## 4. Cum se salvează o favorită
 
-Când apeși steaua, interfața apelează `NewsController.toggleFavorite(article)`.
+Când apeși semnul de carte, interfața apelează `NewsController.toggleFavorite(article)`.
 
 Metoda construiește lista următoare de favorite, o salvează prin `NewsStorage.write()`, apoi actualizează starea vizibilă. Ordinea este intenționată: dacă salvarea eșuează, aplicația nu pretinde că favorita a fost salvată.
 
@@ -80,7 +80,7 @@ Persistența înseamnă că datele pot fi recitite la redeschidere. Nu înseamn�
 
 Este un rezumat extractiv, în limba sursei. Nu este un model generativ și nu traduce automat articolul. Rezultatele sunt păstrate temporar în memorie pentru 30 de minute. Dacă un site nu poate fi citit, pagina de detalii afișează motivul și păstrează accesul la articolul original.
 
-Prin cererea Reader trimitem URL-ul public al articolului. Favoritele și datele calendarului nu sunt incluse în acea cerere. Detaliile integrării sunt în README.
+Prin cererea Reader trimitem URL-ul public al articolului. Favoritele și datele calendarului nu sunt incluse în acea cerere. Reader primește o cerere la `https://r.jina.ai/<url>` cu `Accept: text/plain`. Testele acoperă inclusiv Markdown, frontmatter și răspunsuri JSON.
 
 ## 6. Cum alegem calendarul potrivit platformei
 
@@ -111,17 +111,17 @@ Exportul nativ verifică evenimentele existente și markerul `Appstiri-ID` pentr
 | `scripts/build-android.ps1` | Rulează analiza/testele, construiește APK-ul și îl copiază cu versiunea în nume. |
 | `Configureaza-Android.cmd`, `Genereaza-Android.cmd` | Scurtături Windows pentru pașii de mai sus, cu fereastra păstrată deschisă pentru erori. |
 | `scripts/run-android.ps1` | Folosește și SDK-ul pregătit local când pornești o sesiune de dezvoltare pe Android. |
-| `scripts/generate-app-icons.ps1` | Conține desenul și generează dimensiunile Android/iOS/web fără pachete externe. |
-| `assets/branding/app-icon.png` | Previzualizarea iconiței la 1024×1024. Nu este încărcată ca imagine în interfața Dart. |
+| `scripts/generate-app-icons.ps1` | Generează iconițele Android din sigla UNITBV și variantele iOS/web din desenul cu ziar și stea. Opțiunea `-AndroidOnly` regenerează doar Android. |
+| `assets/branding/app-icon.png` | Previzualizarea desenului cu ziar și stea la 1024×1024. Sigla din interfață este în `assets/branding/unitbv.png`. |
 | `android/app/src/main/res/mipmap-*/` | Iconițe pentru densități Android diferite; versiunea adaptivă lasă sistemul să aleagă forma. |
-| `android/app/src/main/res/drawable/ic_launcher_foreground.xml`, `values/icon_colors.xml` | Desenul vectorial și fundalul iconiței adaptive. |
+| `android/app/src/main/res/drawable/ic_launcher_foreground.xml`, `values/icon_colors.xml` | Încadrarea siglei și fundalul albastru al iconiței adaptive. |
 | `ios/Runner/Assets.xcassets/AppIcon.appiconset/` | Iconițe opace pentru iPhone/iPad și catalogul lor. |
 | `ios/Runner/Info.plist` | Numele afișat pe iPhone; explicațiile existente pentru accesul la calendar sunt păstrate. |
 | `ios/Runner.xcodeproj/project.pbxproj` | Bundle Identifier pentru Runner și testele sale. Contul/Team nu este inventat: îl alegi în Xcode. |
 | `ios/Podfile`, `ios/Flutter/*.xcconfig` | Integrarea CocoaPods pentru pluginurile native din proiect. |
 | `scripts/prepare-ios.sh` | Pregătește și verifică proiectul pe Mac, apoi deschide workspace-ul Xcode. |
 | `scripts/export-mac.ps1`, `Pregateste-pentru-Mac.cmd` | Creează arhiva cu sursele necesare, fără cache-uri și chei private. |
-| `web/manifest.json`, `web/index.html`, `web/icons/`, `web/favicon.png` | Același stil al iconiței și numele scurt pentru varianta web. Buildul web existent se schimbă abia după recompilare. |
+| `web/manifest.json`, `web/index.html`, `web/icons/`, `web/favicon.png` | Numele Știri UNITBV și iconițele web cu ziar și stea. Buildul web existent se schimbă abia după recompilare. |
 | `.gitignore` | Exclude uneltele, fișierele de distribuire și cheile private din versionare. |
 
 Namespace-ul intern Android rămâne `com.example.appstiri`, la fel ca pachetul clasei `MainActivity`. Este diferit de Application ID, ceea ce este permis: identificatorul folosit la instalare este `ro.stirifavorite.app`. Nu trebuie mutat codul Kotlin pentru această schimbare.
@@ -130,11 +130,11 @@ Semnătura certifică proveniența buildului și permite actualizări compatibil
 
 ## 8. Unde faci cinci modificări obișnuite
 
-1. **Culoarea principală:** în `lib/theme/app_theme.dart`, la `AppTheme.blue` și schemele light/dark. Pentru culoarea iconiței editezi desenul din `scripts/generate-app-icons.ps1` și îl rulezi din nou pe Windows; apoi recompilezi platformele dorite.
+1. **Culoarea principală:** în `lib/theme/app_theme.dart`, la `AppTheme.brand` și în schemele light/dark. Pentru iconițele Android actualizezi culoarea în resursele Android și în generator, apoi rulezi `scripts/generate-app-icons.ps1 -AndroidOnly`.
 2. **Aspectul unui card:** în `lib/widgets/article_card.dart`.
 3. **Intervalele calendarului:** în `CalendarSlot.forDay()` din `calendar_document.dart`, apoi actualizezi testele relevante din `test/calendar_test.dart`.
 4. **Sursa știrilor:** în `news_api.dart`; dacă se schimbă și structura JSON, adaptezi `Article` și testele API/model.
-5. **Versiunea distribuită:** în `pubspec.yaml`, de exemplu `version: 1.0.1+2`, apoi reconstruiești și reinstalezi aplicațiile.
+5. **Versiunea distribuită:** în `pubspec.yaml`, de exemplu `version: 1.1.1+3`, apoi reconstruiești și reinstalezi aplicațiile.
 
 ## 9. Cum verifici și cum înveți proiectul
 

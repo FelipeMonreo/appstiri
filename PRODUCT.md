@@ -1,6 +1,6 @@
-# Știri și favorite
+# Știri UNITBV
 
-A Romanian Flutter news reader for Android, iPhone and the browser. The shared Dart code lives in `lib/`; native integration lives in `android/` and `ios/`.
+A Flutter news reader with Romanian and English interface labels for Android, iPhone and the browser. The shared Dart code lives in `lib/`; native integration lives in `android/` and `ios/`.
 
 ## People and tasks
 
@@ -17,10 +17,10 @@ People read technology news on their phones in short sessions, save stories loca
 
 ## Binding design requirements
 
-Follow system brightness automatically. Use the UNITBV mark, UT Sans and the approved Student@UNITBV reference colors. The light theme uses blue and the dark theme uses orange. Keep large labeled controls, Romanian copy, readable article typography and a smooth article-opening transition. Preserve native back behavior and accessibility motion preferences. Use native Flutter motion rather than a browser scrolling library.
+Follow system brightness automatically. Use the UNITBV mark, UT Sans and the approved Student@UNITBV reference colors. The light theme uses blue and the dark theme uses orange. Use large controls, localized labels, readable article typography and a smooth article panel transition. Support system Back and accessibility motion preferences. Use native Flutter motion rather than a browser scrolling library.
 
 ## Shipping constraints
 
-The working machine is Windows. Android release builds need Android SDK and the existing private signing key. iOS builds need macOS/Xcode and the owner's Apple team. A web build is not evidence of native calendar or 120 Hz performance. Do not call unsigned iOS output installable or claim a native build succeeded without actually compiling it.
+The working machine is Windows. Android release builds use the Android SDK and a private signing key. The build script generates a key only if both signing files are absent. iOS builds need macOS/Xcode and the owner's Apple team. A web build is not evidence of native calendar or 120 Hz performance. Do not call unsigned iOS output installable or claim a native build succeeded without actually compiling it.
 
 Current version: `1.1.0+2`. See `docs/INSTALARE-TELEFON.md` for the exact status and commands; see `DESIGN.md` for tokens and motion.

@@ -4,7 +4,7 @@ This redesign implements the approved UNITBV-inspired header and light/dark pale
 
 ## Visual direction
 
-Știri UNITBV is a compact reader powered by Hacker News. The header language button switches the interface between Romanian and English for the current session. Article titles and summaries keep their source language. Scrollbars stay hidden across the app. The feed starts with the actual list of stories and gives each card equal emphasis. The header combines the UNITBV mark, app title, source and refresh. Favorites keeps calendar export above the saved list. The white UNITBV mark is bundled from the [university website](https://unitbv.ro/images/Logo-UT-s.png) and displayed in the app header and launch animation. Navigation is in the bottom bar on phones and the top bar when width and text scaling allow.
+Știri UNITBV is a compact reader powered by Hacker News. The header language button switches the interface between Romanian and English for the current session. Article titles and summaries keep their source language. Scrollbars stay hidden across the app. The feed starts with the actual list of stories and gives each card equal emphasis. The header combines the UNITBV mark, app title, language selector and refresh. Favorites keeps calendar export above the saved list. The white UNITBV mark is bundled from the [university website](https://unitbv.ro/images/Logo-UT-s.png) and displayed in the app header and launch animation. Navigation is in the bottom bar on phones and the top bar when width and text scaling allow.
 
 The owner reads on a phone in changing ambient light. System brightness chooses the palette; there is no independent app setting to fall out of sync.
 
@@ -23,7 +23,7 @@ The owner reads on a phone in changing ambient light. System brightness chooses 
 - UT Sans supplies headlines, controls and reading text. Regular, Medium and Bold are bundled from the supplied TTF archive.
 - Reading text is 18 logical pixels with 1.75 line height. System text scaling remains enabled. Headlines wrap; essential article titles are not truncated.
 - Rounded cards use a clear surface, a thin outline, and 12 logical pixels between cards. The title opens details. Bookmark and source icons have tooltips and touch targets of at least 48 logical pixels. Calendar export retains its visible label.
-- The feed uses lazy slivers and a 1064-pixel maximum width. The domain sits below the title. Desktop cards align the activity and actions beside the headline. At narrow widths or enlarged text, the title uses the full card width and activity and actions sit underneath. The reader has a 768-pixel maximum width.
+- The feed uses lazy slivers and a 1064-pixel maximum width. The domain, author and publication date sit below the title. Desktop cards align the activity and actions beside the headline. At narrow widths or enlarged text, the title uses the full card width and activity and actions sit underneath. The reader has a 768-pixel maximum width.
 - The calendar title and content can scroll together. No task depends on hover or a gesture alone.
 
 ## Motion
@@ -38,7 +38,7 @@ The owner reads on a phone in changing ambient light. System brightness chooses 
 | Summary change | 220 ms | Crossfade loading/content/error states. |
 | Theme | 220 ms | Adjust to a system brightness change. |
 
-Both Android Remove animations and iOS Reduce Motion disable the custom timed transitions. There are no decorative background loops or per-row entrance sequences. The feed and article use Flutter scroll physics with inertia and a soft edge. Reduced motion uses a clamped edge. The launch animation coordinates the logo expansion, reveal and reader zoom on a single Flutter ticker.
+Both Android Remove animations and iOS Reduce Motion disable the custom timed transitions. The first cards have a staggered entry during the launch sequence. The feed and article use Flutter scroll physics with inertia and a soft edge. Reduced motion uses a clamped edge. The launch animation coordinates logo assembly, movement into the header, card entry and title typing on a single Flutter ticker. On Android, the sequence waits for Flutter to rasterize its first frame.
 
 The article route exposes its actual controller animation. Hero's temporary offstage measurement can report a completed proxy animation before the real route completes; requests wait for the real controller instead. The regression test observes the route status when the details API is called.
 
@@ -46,7 +46,7 @@ Android requests the fastest supported display mode at the active resolution whe
 
 ## Frosted controls
 
-The article and calendar export panels use about 70% of the viewport height. Desktop panels use up to 70% of its width, while phones retain room for reading and actions. Modal routes keep keyboard focus in the foreground over a dimmed, blurred backdrop. The mobile navigation and article action bar sit over scrolling content. The phone navigation docks flush to the bottom edge and extends its glass surface under the system gesture area. The article action bar floats with rounded corners. Both use dense backdrop blur, a frosted tint, a fine reflective edge and a soft shadow. High-contrast mode uses a solid background. Card and article text remain on solid reading surfaces.
+The article and calendar export panels use about 70% of the viewport height. Desktop panels use up to 70% of its width, while phones retain room for reading and actions. Modal routes keep keyboard focus in the foreground over a dimmed, blurred backdrop. The mobile navigation and article action bar sit over scrolling content. The phone navigation docks flush to the bottom edge and extends its glass surface under the system gesture area. The article action bar floats with rounded corners. Both use dense backdrop blur, a frosted tint at 15–20% transparency, a fine reflective edge and a soft shadow. High-contrast mode uses a solid background. Card and article text remain on solid reading surfaces.
 
 ## Guidance used
 
@@ -71,4 +71,4 @@ No skills were installed into the user's global agent configuration. Offline sea
 
 Automated tests cover semantic text/action contrast, system-theme switching without losing favorites, deferred network work, both motion preferences, and long content at 320 logical pixels with 200% text.
 
-Browser and native device checks from the previous design are documented in the [implementation guide](docs/DESIGN-SI-ANIMATII.md). Native calendar permissions, assistive technology and sustained high-refresh performance require real-device verification.
+The [README](README.md#testare) records the handoff checks. The [design guide](docs/DESIGN-SI-ANIMATII.md) describes device profiling and accessibility checks.

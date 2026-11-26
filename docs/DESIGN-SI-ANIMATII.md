@@ -1,6 +1,6 @@
-# Designul nou: ce s-a schimbat, unde și de ce
+# Design și animații
 
-Actualizare din 23 noiembrie 2026, versiunea `1.1.0+2`.
+Referință tehnică pentru Știri UNITBV, versiunea `1.1.0+2`.
 
 Aplicația păstrează știrile, favoritele, rezumatele și exportul în calendar. Interfața a fost refăcută pentru a urmări tema telefonului, pentru lectură și pentru butoane ușor de înțeles. Nu trebuie rescrisă separat pentru Android și iPhone: cele două folosesc aceleași ecrane Dart.
 
@@ -9,24 +9,24 @@ Aplicația păstrează știrile, favoritele, rezumatele și exportul în calenda
 | Fișier | Ce controlează |
 | --- | --- |
 | `lib/theme/app_theme.dart` | Culorile celor două teme, fonturile, dimensiunile de bază, butoanele și stilul dialogurilor. |
-| `lib/app.dart` | Activează `ThemeMode.system`, tema deschisă și tema închisă. |
-| `lib/screens/news_screen.dart` | Pagina de știri, biblioteca de favorite, antetul și navigarea de jos. |
-| `lib/widgets/article_card.dart` | Prima știre evidențiată, celelalte știri, metadatele și acțiunile fiecărui articol. |
-| `lib/screens/details_screen.dart` | Ecranul de lectură, rezumatul, tranziția și butonul fix pentru articolul complet. |
+| `lib/app.dart` | Configurează `ThemeMode.system`, limba interfeței și succesiunea animației de pornire. |
+| `lib/screens/news_screen.dart` | Știri, Favorite, sigla și selectorul de limbă din antet, plus navigarea adaptată la lățime. |
+| `lib/widgets/article_card.dart` | Cardul comun pentru ambele liste, cu toate metadatele și acțiunile articolului. |
+| `lib/screens/details_screen.dart` | Panoul de lectură cu fundal estompat, rezumat și acces la articolul complet. |
 | `lib/screens/export_dialog.dart` | Alegerea datei/calendarului și comenzile mari de export/anulare. |
-| `lib/widgets/reader_components.dart` | Mesajele de eroare, starea fără știri și funcțiile care respectă reducerea animațiilor. |
-| `assets/fonts/`, `pubspec.yaml` | Fișierele locale Bitter și Manrope, licențele lor și declararea lor în Flutter. |
+| `lib/widgets/reader_components.dart` | Barele de sticlă mată, navigarea mobilă, animația de refresh și componentele comune. |
+| `assets/fonts/`, `pubspec.yaml` | Fonturile UT Sans Regular, Medium și Bold declarate în Flutter. |
 
-Tema deschisă folosește albastru cu alb. Tema închisă folosește gri închis cu alb. Telefonul alege automat varianta prin setările sale; aplicația se adaptează și când schimbi tema în timpul utilizării.
+Tema deschisă folosește albastru pe suprafețe deschise. Tema închisă folosește portocaliu pe suprafețe aproape negre. Telefonul alege automat varianta prin setările sale; aplicația se adaptează și când schimbi tema în timpul utilizării.
 
 Un widget folosește de exemplu `Theme.of(context).colorScheme.primary`, nu o culoare copiată în fiecare buton. Astfel, când se schimbă tema, toate componentele primesc culori compatibile. Paleta completă și motivele alegerilor sunt în [DESIGN.md](../DESIGN.md).
 
 ## 2. Ce se întâmplă când deschizi o știre
 
-1. Butonul **Detalii** apelează `_details()` din `news_screen.dart`.
-2. Navigatorul deschide un `ArticleRoute`. Durata normală de intrare este 360 ms; revenirea folosește 280 ms.
+1. Apăsarea titlului apelează `_details()` din `news_screen.dart`.
+2. Navigatorul deschide un panou `ArticleRoute` la aproximativ 70% din înălțimea ecranului. Intrarea durează 460 ms, iar închiderea durează 280 ms.
 3. `ArticleHeadline` are același identificator Hero în listă și în ecranul de lectură. Flutter poate lega vizual cele două poziții ale titlului.
-4. Ruta păstrează tranzițiile platformei, inclusiv revenirea specifică iPhone și predictive back pe Android.
+4. Panoul păstrează focusul în interior și poate fi închis cu butonul Înapoi sau prin atingerea fundalului.
 5. Ecranul afișează imediat datele deja disponibile. Cererile pentru detalii și rezumat încep după terminarea tranziției reale.
 6. Rezumatul înlocuiește starea de încărcare printr-o tranziție scurtă. Butonul **Citește articolul complet** rămâne vizibil jos în timpul lecturii.
 
@@ -52,26 +52,24 @@ Când există cheia proprie a proiectului, și buildul Android **profile** folos
 
 ## 4. Accesibilitate și text mare
 
-Butoanele principale au o înălțime minimă de 56 de pixeli logici. Pe ecrane înguste se așază vertical. Textul important poate trece pe mai multe rânduri, iar dimensiunea fontului urmează setările telefonului.
+Butoanele principale au o înălțime minimă de 56 de pixeli logici. Cardurile mută activitatea și acțiunile sub titlu pe ecrane înguste. Textul important poate trece pe mai multe rânduri, iar dimensiunea fontului urmează setările telefonului.
 
-Au fost verificate ecrane de 320 de pixeli logici la 200% text, inclusiv titluri lungi și exportul în calendar. Metadatele se pot împărți pe rânduri, iar titlul și conținutul dialogului pot derula împreună. Data decorativă din bara de sus poate fi ascunsă când nu mai are spațiu.
+Au fost verificate ecrane de 320 de pixeli logici la 200% text, inclusiv titluri lungi și exportul în calendar. Metadatele se pot împărți pe rânduri, iar titlul și conținutul dialogului pot derula împreună. Câmpurile cardului se pot împărți pe mai multe rânduri.
 
 Android **Remove animations** și iOS **Reduce Motion** sunt preferințe distincte în această versiune Flutter. Codul le verifică pe ambele. Dacă una este activă, tranzițiile proprii folosesc durată zero și animația Hero este dezactivată. Nu limităm global mărimea textului pentru a ascunde probleme de aspect.
 
-Testele de contrast verifică perechile semantice de text și fundal la minimum 4,5:1. Verificarea arborelui de accesibilitate din browser confirmă prezența titlurilor și a comenzilor. Aceste verificări nu înseamnă că am testat deja VoiceOver sau TalkBack pe telefon și nici că am făcut un audit WCAG complet.
+Testele de contrast verifică perechile semantice de text și fundal la minimum 4,5:1. VoiceOver, TalkBack și conformitatea completă WCAG necesită verificări separate.
 
-## 5. Ce s-a verificat și ce urmează
+## 5. Pornire, feedback și verificare vizuală
 
-Verificate: analiza statică fără probleme, **62 de teste trecute** și compilarea **web release**. Testele noi sunt în `test/reader_design_test.dart`; testele fluxurilor existente au fost adaptate să deruleze până la controale înainte de apăsare.
+Intro-ul din `lib/app.dart` durează aproximativ 5,54 secunde. Pătratul alb apare primul, liniile intră și formează sigla, iar aceasta se luminează pe segmente. Sigla se micșorează în poziția din antet. După 80 ms cardurile intră din stânga, decalat, și titlul se scrie în același timp. Pe Android, animația Dart așteaptă primul cadru rasterizat.
 
-Capturile din `distributie/previews/` sunt făcute din aplicația compilată, cu răspunsuri API simulate pentru un rezultat repetabil. Articolele de demonstrație nu au fost adăugate în aplicația distribuită. Codul de producție continuă să ceară știrile reale din API.
+Bara mobilă este lipită de marginea de jos. Indicatorul glisează în 280 ms între Știri și Favorite. Pictograma refresh face o rotație în 850 ms cât timp cererea este activă. La salvarea unei favorite, semnul de carte pulsează discret timp de 240 ms. Setarea de reducere a mișcării dezactivează aceste animații.
 
-Compilarea Android necesită în continuare SDK-ul Android, iar compilarea iOS necesită Mac/Xcode și semnarea cu contul Apple. Uneltele Android nu au putut fi descărcate de agent în acest mediu. Pe calculator a fost folosită o copie Flutter locală, ignorată în `.tooling/`, pentru analiză, teste și web, fără modificarea instalării tale principale. Arhiva pentru Mac nu include acea copie, cache-urile sau cheile private Android.
-
-Pentru APK rulezi `Configureaza-Android.cmd`, apoi `Genereaza-Android.cmd` din contul Windows obișnuit. Pentru Mac folosești `Pregateste-pentru-Mac.cmd`. Procedurile complete sunt în [INSTALARE-TELEFON.md](INSTALARE-TELEFON.md).
+Testele din `test/reader_design_test.dart` acoperă contrastul, textul mărit, intro-ul, rotația refresh și tranziția articolului. [Rezultatele predării](../README.md#testare) sunt centralizate în README. Pentru instalare și verificări pe dispozitive, urmează [ghidul tehnic](INSTALARE-TELEFON.md).
 
 ## 6. Cum faci singur o schimbare mică
 
-Pentru a schimba albastrul, modifici `AppTheme.blue` din `lib/theme/app_theme.dart`. Pentru titlul paginii principale, cauți textul în `_ReaderHeader` din `news_screen.dart`. Pentru durata deschiderii, modifici `ArticleRoute.transitionDuration` din `details_screen.dart` și verifici din nou comportamentul cu reducerea mișcării activată.
+Pentru a schimba albastrul, modifici `AppTheme.brand` din `lib/theme/app_theme.dart`. Pentru titlul paginii principale, vezi apelul `ReaderHeaderTitle` din `news_screen.dart`. Pentru durata deschiderii, modifici `ArticleRoute.transitionDuration` din `details_screen.dart` și verifici din nou comportamentul cu reducerea mișcării activată.
 
 După o modificare rulezi `flutter analyze` și `flutter test`, apoi compilezi din nou platforma dorită. O schimbare în cod nu ajunge singură în aplicația instalată. Pentru o distribuire nouă crești versiunea și numărul buildului în `pubspec.yaml` și păstrezi aceeași cheie Android și același identificator de aplicație.

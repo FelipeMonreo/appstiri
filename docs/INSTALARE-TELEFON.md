@@ -2,20 +2,12 @@
 
 Acest ghid explică ce faci, unde lucrezi și de ce. Codul aplicației este în `lib/`. Din același cod Flutter obținem două aplicații native, câte una pentru fiecare sistem de operare.
 
-## Starea reală a pregătirii
+## Starea proiectului
 
-Actualizare din 23 noiembrie 2026, versiunea `1.1.0+2`:
-
-- Numele de pe telefon: **Știri și favorite**.
-- Iconiță comună: un ziar alb cu o stea galbenă pe fundal albastru.
-- Identificator Android și iOS propus: `ro.stirifavorite.app`. Nu este înregistrat într-un magazin. Pentru Apple, disponibilitatea se verifică în contul tău; dacă este ocupat, alegem unul propriu înainte de prima distribuire.
-- Android are o cheie proprie pentru semnarea versiunilor release. Scriptul o generează o singură dată dacă lipsește. Actualizările trebuie să folosească aceeași cheie.
-- Sunt pregătite comenzile Windows de configurare, compilare și transfer al surselor pe Mac.
-- Pentru iOS sunt pregătite numele, iconițele și configurarea CocoaPods. Contul Apple și Team se aleg în Xcode pe Mac.
-- **Nu există încă un APK compilat prin acest flux și nici o versiune iOS compilată.** În mediul agentului nu există Android SDK, accesul la descărcarea SDK-ului este blocat, iar SDK-ul Flutter instalat în afara proiectului nu poate fi modificat de agent. Windows nu poate rula Xcode. Scripturile trebuie executate în contul Windows obișnuit, apoi iOS se compilează pe Mac.
-- Validarea statică, verificarea semnăturii și verificarea arhivei nu înlocuiesc compilarea și testarea pe telefon.
-
-Verificări efectuate: analiza statică fără probleme, **62 de teste trecute**, build **web release** reușit, verificarea vizuală a temelor și a ecranului de lectură. În browser, cu răspunsuri API simulate, au fost verificate salvarea favoritelor, persistența după reîncărcare, schimbarea temei, descărcarea `.ics` și ștergerea unei favorite, fără excepții JavaScript. Pentru aceste verificări a fost folosită o copie Flutter în `.tooling/`, fără modificarea instalării principale. Verificările native de pe telefon rămân de făcut după instalarea SDK-ului și, pentru iOS, pe Mac. Explicațiile designului sunt în [DESIGN-SI-ANIMATII.md](DESIGN-SI-ANIMATII.md).
+- Versiunea din `pubspec.yaml` este `1.1.0+2`. Numele afișat pe Android și iOS este **Știri UNITBV**.
+- Android folosește sigla UNITBV albă pe fundal albastru. Iconița din catalogul iOS folosește desenul cu ziar și stea.
+- Identificatorul configurat pentru Android și Runner iOS este `ro.stirifavorite.app`. Echipa de semnare iOS se alege în Xcode.
+- Un build Android de debug a fost instalat și pornit în emulator în timpul dezvoltării. Verificările de predare și limitele lor sunt în [README](../README.md#testare).
 
 ## 1. Android: obținerea fișierului instalabil
 
@@ -25,7 +17,7 @@ Verificări efectuate: analiza statică fără probleme, **62 de teste trecute**
 
 Comanda folosește `scripts/setup-android.ps1`. Ea descarcă de la Google uneltele de linie de comandă, verifică suma SHA256 și instalează Android SDK în `.tooling/android-sdk`. Nu instalează emulator și nu modifică permanent PATH-ul Windows. Va afișa licențele Google pentru a le citi și accepta. Prima instalare are nevoie de internet și de câțiva GB liberi; fereastra rămâne deschisă ca să poți vedea eventualele erori.
 
-În proiectul actual folosim Flutter 3.50.1, SDK Android 36, Build Tools 36.0.0, NDK 28.2.13676358 și JDK 21. Scriptul caută Java în `JAVA_HOME`, apoi în variabila existentă `JavaHome`, apoi în JDK-ul inclus în Android Studio. Dacă nu găsește Java, instalezi Android Studio sau configurezi `JAVA_HOME` către JDK 21.
+Configurarea folosește Flutter 3.50.1, platforma Android 36, Build Tools 36.0.0, NDK 28.2.13676358 și CMake 3.22.1. Poți folosi JDK 21 sau JDK-ul compatibil inclus în Android Studio. Scriptul caută Java în `JAVA_HOME`, apoi în variabila existentă `JavaHome`, apoi în JDK-ul inclus în Android Studio. Dacă nu găsește Java, instalezi Android Studio sau configurezi `JAVA_HOME` către JDK 21.
 
 Alternativa cu interfață grafică este [Android Studio și SDK Manager](https://docs.flutter.dev/platform-integration/android/setup). Dacă SDK-ul este deja în locația standard, scriptul de compilare îl poate folosi. Un SDK aflat în altă locație se poate indica explicit:
 
@@ -84,7 +76,26 @@ Nu le trimite împreună cu APK-ul și nu le publica în GitHub. Sunt excluse di
 
 Identificatorul aplicației + semnătura + numărul versiunii permit Android să recunoască o actualizare. Dacă schimbi identificatorul, Android o tratează ca altă aplicație. Dacă schimbi semnătura, poate refuza actualizarea. Nu dezinstala aplicația pentru o actualizare obișnuită: dezinstalarea poate șterge favoritele locale.
 
+### Rulare în emulator sau pe un dispozitiv conectat
+
+Pentru emulator instalezi **Android Emulator**, o imagine de sistem și **Android SDK Command-line Tools (latest)** din Android Studio. Verifici licențele cu `flutter doctor --android-licenses`, apoi pornești telefonul virtual din **Device Manager**. Pentru un telefon fizic activezi depanarea USB și autorizezi calculatorul.
+
+```powershell
+flutter devices
+flutter run -d ID_DISPOZITIV
+```
+
+Folosești ID-ul afișat, de exemplu `emulator-5554`. Pentru un APK de debug rulezi `flutter build apk --debug`. Dacă un build Windows folosește sursele și cache-ul Pub de pe unități diferite, proiectul are compilarea incrementală Kotlin dezactivată în `android/gradle.properties`.
+
 ## 2. iPhone: transferul și instalarea folosind Mac-ul
+
+### Testare în Safari pe iPhone, de pe Windows
+
+Din rădăcina proiectului rulezi `flutter build web`, apoi deschizi `Porneste-iPhone.cmd`. Scriptul caută Python și servește `build/web` pe portul 5175. Lași fereastra deschisă, conectezi iPhone-ul și calculatorul la aceeași rețea și deschizi în Safari adresa afișată. Dacă Windows cere acces pentru Python, permiți conexiunile pe rețeaua privată.
+
+Pentru testare pe calculator poți porni direct `flutter run -d chrome` sau `flutter run -d web-server --web-hostname 127.0.0.1 --web-port 5173`. Favoritele din browser sunt asociate adresei, portului și profilului folosit. O adresă diferită poate afișa altă listă de favorite.
+
+Safari permite testarea interfeței web și descărcarea fișierului `.ics`. Pentru a testa accesul direct la calendarul iOS, instalezi aplicația nativă de pe Mac.
 
 ### Ce pregătești pe Windows
 
@@ -153,10 +164,10 @@ Pentru distribuirea către alte persoane și ulterior App Store folosim [fluxul 
 
 ## 3. Cum publici o modificare ulterioară
 
-**Salvarea unui fișier pe calculator nu modifică aplicațiile instalate.** Exemplu: schimbi culoarea unui buton în `lib/app.dart`. Telefoanele păstrează versiunea veche până instalezi un build nou.
+**Salvarea unui fișier pe calculator nu modifică aplicațiile instalate.** Exemplu: schimbi culoarea unui buton în `lib/theme/app_theme.dart`. Telefoanele păstrează versiunea veche până instalezi un build nou.
 
 1. Modifici codul din proiectul principal de pe Windows.
-2. În `pubspec.yaml` crești versiunea, de exemplu din `1.0.0+1` în `1.0.1+2`. Cifra după `+` este numărul buildului și trebuie să crească la distribuiri noi.
+2. În `pubspec.yaml` crești versiunea, de exemplu din `1.1.0+2` în `1.1.1+3`. Cifra după `+` este numărul buildului și trebuie să crească la distribuiri noi.
 3. Pentru Android rulezi din nou `Genereaza-Android.cmd`, folosind aceeași cheie. Instalezi APK-ul nou peste aplicația existentă.
 4. Pentru iOS generezi o nouă arhivă cu `Pregateste-pentru-Mac.cmd`, o transferi pe Mac, refaci pregătirea și instalarea cu același cont și Bundle Identifier. Dacă ai schimbat Bundle Identifier pe Mac, păstrează modificarea și în proiectul principal de pe Windows pentru arhivele viitoare. Nu distribui accidental o copie veche de pe Mac.
 
@@ -170,7 +181,7 @@ Actualizările prin Google Play/App Store pot fi automatizate mai târziu. Acest
 2. Pe Wi-Fi și pe date mobile se încarcă știrile și detaliile. Verifici și rezumatul unui articol accesibil public.
 3. Adaugi o știre la favorite, închizi aplicația și confirmi că favorita există după redeschidere.
 4. După o încărcare reușită, activezi modul avion și verifici lista păstrată local. Prima încărcare și articolele externe cer internet.
-5. La export permiți accesul la calendar, alegi un calendar în care poți scrie și verifici evenimentul în aplicația Calendar a telefonului.
+5. La export permiți accesul la calendar, alegi un calendar în care poți scrie și verifici titlul, autorul, linkul și data publicării în eveniment. Poți folosi un calendar local din dialog dacă dispozitivul nu are un calendar disponibil.
 6. Repeți exportul cu aceeași știre și dată: evenimentul deja existent trebuie să fie raportat ca atare.
 7. Verifici intervalele pentru o zi de luni/miercuri/vineri (14–20), marți/joi (12–18), sâmbătă/duminică (08–12).
 8. Verifici și refuzul permisiunii: aplicația trebuie să explice problema, apoi să funcționeze după activarea accesului din setări. Pe iOS este nevoie de acces complet pentru citirea calendarelor și evitarea duplicatelor.
